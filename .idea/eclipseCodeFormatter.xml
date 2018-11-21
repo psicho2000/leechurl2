@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="EclipseCodeFormatterProjectSettings">
+    <option name="projectSpecificProfile">
+      <ProjectSpecificProfile>
+        <option name="formatter" value="ECLIPSE" />
+        <option name="pathToConfigFileJava" value="D:/Eigenes/Arbeit/07 - GBTEC/workspace/gbtec-formatter.xml" />
+      </ProjectSpecificProfile>
+    </option>
+    <option name="selectedGlobalProfile">
+      <Settings>
+        <option name="id" value="1542831568562" />
+        <option name="name" value="Markus" />
+        <option name="pathToConfigFileJava" value="D:/Eigenes/Arbeit/07 - GBTEC/workspace/gbtec-formatter.xml" />
+      </Settings>
+    </option>
+  </component>
+</project>
