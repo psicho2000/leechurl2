@@ -114,17 +114,16 @@ public class PredictionApi {
         predictParser.addArgument("modelId");
         predictParser.addArgument("filePath");
         predictParser.addArgument("scoreThreshold").nargs("?").type(String.class).setDefault("");
-
-        String projectId = System.getenv("PROJECT_ID");
-        String computeRegion = System.getenv("REGION_NAME");
+        predictParser.addArgument("projectId");
+        predictParser.addArgument("regionName");
 
         Namespace ns;
         try {
             ns = parser.parseArgs(args);
             if (ns.get("command").equals("predict")) {
                 predict(
-                        projectId,
-                        computeRegion,
+                        ns.getString("projectId"),
+                        ns.getString("regionName"),
                         ns.getString("modelId"),
                         ns.getString("filePath"),
                         ns.getString("scoreThreshold"));
