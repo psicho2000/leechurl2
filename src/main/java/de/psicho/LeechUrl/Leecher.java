@@ -1,3 +1,5 @@
+package de.psicho.LeechUrl;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -13,7 +15,7 @@ import java.util.stream.IntStream;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class Main {
+public class Leecher {
 
     private static final String DOWNLOAD_DESTINATION = "D:\\Eigenes\\Desktop\\downloads\\";
     private static final String DOWNLOAD_IMAGE_FILETYPE = ".jpg";
@@ -24,8 +26,11 @@ public class Main {
     private static final Integer PAGE_INDEX_START = 40;
     private static final Integer PAGE_INDEX_END = 4062;
 
-    public static void main(String[] args) {
-        IntStream.range(PAGE_INDEX_START, PAGE_INDEX_END + 1).forEach(Main::extractImagesFromPage);
+    /**
+     * <p>PredictionApi entry for leech</p>
+     */
+    public static void leech() {
+        IntStream.range(PAGE_INDEX_START, PAGE_INDEX_END + 1).forEach(Leecher::extractImagesFromPage);
     }
 
     private static void extractImagesFromPage(Integer currentIndex) {
@@ -43,7 +48,7 @@ public class Main {
             while (matcher.find()) {
                 foundLinks.add(matcher.group(1));
             }
-            foundLinks.forEach(Main::download);
+            foundLinks.forEach(Leecher::download);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -62,5 +67,5 @@ public class Main {
             ex.printStackTrace();
         }
     }
-}
 
+}
