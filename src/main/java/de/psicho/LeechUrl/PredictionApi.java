@@ -22,7 +22,6 @@ package de.psicho.LeechUrl;
 
 // Imports the Google Cloud client library
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
@@ -31,8 +30,6 @@ import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 
-import com.google.auth.Credentials;
-import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.automl.v1beta1.AnnotationPayload;
 import com.google.cloud.automl.v1beta1.ExamplePayload;
@@ -40,14 +37,13 @@ import com.google.cloud.automl.v1beta1.Image;
 import com.google.cloud.automl.v1beta1.ModelName;
 import com.google.cloud.automl.v1beta1.PredictResponse;
 import com.google.cloud.automl.v1beta1.PredictionServiceClient;
-import com.google.cloud.automl.v1beta1.PredictionServiceSettings;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
 /**
  * @see <a href="https://github.com/GoogleCloudPlatform/java-docs-samples/tree/master/vision/automl">Java Sample by Google</a>
+ *      Usage: set ENV var GOOGLE_APPLICATION_CREDENTIALS to json file containing service credentials
  */
 public class PredictionApi {
 
@@ -55,9 +51,7 @@ public class PredictionApi {
     private static final String PROJECT_ID = "sort-pics";
     private static final String COMPUTE_REGION = "us-central1";
     private static final String MODEL_ID = "ICN4029841784534137370";
-    private static final String SCORE_THRESHOLD = "0.8";
-    private static final String CREDENTIAL_PATH = "D:\\Eigenes\\Desktop\\sort-pics-9f5bbbe58175.json";
-    private static final Credentials CREDENTIALS = createCredentials();
+    private static final String SCORE_THRESHOLD = "0.8"; // FIXME fine tune this value or make it an input arg
 
     /**
      * Demonstrates using the AutoML client to predict an image.
@@ -67,9 +61,7 @@ public class PredictionApi {
     public static void batchPredict() throws IOException {
 
         // Instantiate client for prediction service.
-        PredictionServiceSettings predictionServiceSettings =
-            PredictionServiceSettings.newBuilder().setCredentialsProvider(() -> CREDENTIALS).build();
-        PredictionServiceClient predictionClient = PredictionServiceClient.create(predictionServiceSettings);
+        PredictionServiceClient predictionClient = PredictionServiceClient.create();
 
         // Get the full path of the model.
         ModelName name = ModelName.of(PROJECT_ID, COMPUTE_REGION, MODEL_ID);
@@ -98,22 +90,11 @@ public class PredictionApi {
         }
     }
 
-    private static Credentials createCredentials() {
-        GoogleCredentials credentials = null;
-        try {
-            credentials = GoogleCredentials.fromStream(new FileInputStream(CREDENTIAL_PATH))
-                .createScoped(Lists.newArrayList("https://www.googleapis.com/auth/cloud-platform"));
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return credentials;
-    }
-
     public static ByteString getFileFromBucket(String filename) {
         String basePath = "_unrated";
         String filePath = basePath + "/" + filename;
 
-        Storage storage = StorageOptions.newBuilder().setCredentials(CREDENTIALS).build().getService();
+        Storage storage = StorageOptions.newBuilder().build().getService();
 
         try (ReadChannel reader = storage.reader(BUCKET_NAME, filePath)) {
             InputStream inputStream = Channels.newInputStream(reader);
