@@ -22,6 +22,8 @@ package de.psicho.LeechUrl;
 
 // Imports the Google Cloud client library
 
+import static java.lang.String.format;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
@@ -52,18 +54,23 @@ public class PredictionApi {
     private static final String COMPUTE_REGION = "us-central1";
     private static final String MODEL_ID = "ICN4029841784534137370";
     private static final String SCORE_THRESHOLD = "0.8"; // FIXME fine tune this value or make it an input arg
+    private static final String BASE_PATH = "_unrated/";
+    private static final Storage STORAGE = StorageOptions.newBuilder().build().getService();
 
     /**
      * Demonstrates using the AutoML client to predict an image.
-     *
-     * @throws IOException on Input/Output errors.
      */
-    public static void batchPredict() throws IOException {
-
+    public static void batchPredict() {
         // Instantiate client for prediction service.
-        PredictionServiceClient predictionClient = PredictionServiceClient.create();
+        PredictionServiceClient predictionClient = null;
+        try {
+            predictionClient = PredictionServiceClient.create();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return;
+        }
 
-        // Get the full path of the model.
+        // Get the full path of the model
         ModelName name = ModelName.of(PROJECT_ID, COMPUTE_REGION, MODEL_ID);
 
         // Additional parameters that can be provided for prediction e.g. Score Threshold
@@ -73,31 +80,39 @@ public class PredictionApi {
         // FIXME: foreach or rather use batch mode
         // https://cloud.google.com/ml-engine/docs/tensorflow/batch-predict
         // https://cloud.google.com/ml-engine/reference/rest/v1/projects.jobs#PredictionInput
+        // Implement logging and from/to mechanism
         String filename = "abstract_headphones.jpg";
 
-        // Read the image and assign to payload.
+        predict(predictionClient, name, filename, params);
+    }
+
+    private static void predict(PredictionServiceClient predictionClient, ModelName name, String filename,
+        Map<String, String> params) {
+
+        // Read the image
         ByteString content = getFileFromBucket(filename);
-        Image image = Image.newBuilder().setImageBytes(content).build();
-        ExamplePayload examplePayload = ExamplePayload.newBuilder().setImage(image).build();
+        if (content == null) {
+            System.out.println(format("File '%s' not found!", filename));
+        } else {
+            // Assign the image to payload
+            Image image = Image.newBuilder().setImageBytes(content).build();
+            ExamplePayload examplePayload = ExamplePayload.newBuilder().setImage(image).build();
 
-        // Perform the AutoML Prediction request
-        PredictResponse response = predictionClient.predict(name, examplePayload, params);
+            // Perform the AutoML Prediction request
+            PredictResponse response = predictionClient.predict(name, examplePayload, params);
 
-        System.out.println("Prediction results:");
-        for (AnnotationPayload annotationPayload : response.getPayloadList()) {
-            System.out.println("Predicted class name :" + annotationPayload.getDisplayName());
-            System.out.println("Predicted class score :" + annotationPayload.getClassification().getScore());
+            // Process the result
+            System.out.println("Prediction results:");
+            for (AnnotationPayload annotationPayload : response.getPayloadList()) {
+                System.out.println("Predicted class name :" + annotationPayload.getDisplayName());
+                System.out.println("Predicted class score :" + annotationPayload.getClassification().getScore());
+            }
         }
     }
 
-    public static ByteString getFileFromBucket(String filename) {
-        String basePath = "_unrated";
-        String filePath = basePath + "/" + filename;
-
-        Storage storage = StorageOptions.newBuilder().build().getService();
-
-        try (ReadChannel reader = storage.reader(BUCKET_NAME, filePath)) {
-            InputStream inputStream = Channels.newInputStream(reader);
+    private static ByteString getFileFromBucket(String filename) {
+        try (ReadChannel reader = STORAGE.reader(BUCKET_NAME, BASE_PATH + filename);
+            InputStream inputStream = Channels.newInputStream(reader);) {
             return ByteString.copyFrom(IOUtils.toByteArray(inputStream));
         } catch (IOException ex) {
             ex.printStackTrace();
