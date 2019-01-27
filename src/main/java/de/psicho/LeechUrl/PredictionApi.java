@@ -62,10 +62,9 @@ public class PredictionApi {
     /**
      * Demonstrates using the AutoML client to predict an image.
      *
-     * @param filename the Local text file path of the content to be classified.
      * @throws IOException on Input/Output errors.
      */
-    public static void predict(String filename) throws IOException {
+    public static void batchPredict() throws IOException {
 
         // Instantiate client for prediction service.
         PredictionServiceSettings predictionServiceSettings =
@@ -82,6 +81,7 @@ public class PredictionApi {
         // FIXME: foreach or rather use batch mode
         // https://cloud.google.com/ml-engine/docs/tensorflow/batch-predict
         // https://cloud.google.com/ml-engine/reference/rest/v1/projects.jobs#PredictionInput
+        String filename = "abstract_headphones.jpg";
 
         // Read the image and assign to payload.
         ByteString content = getFileFromBucket(filename);
