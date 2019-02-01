@@ -1,5 +1,8 @@
 package de.psicho.LeechUrl;
 
+import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -11,9 +14,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
-
-import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Leecher {
 
@@ -27,7 +27,7 @@ public class Leecher {
     private static final Integer PAGE_INDEX_END = 4062;
 
     /**
-     * <p>PredictionApi entry for leech</p>
+     * <p>Prediction entry for leech</p>
      */
     public static void leech() {
         IntStream.range(PAGE_INDEX_START, PAGE_INDEX_END + 1).forEach(Leecher::extractImagesFromPage);
@@ -60,7 +60,7 @@ public class Leecher {
         try {
             URL downloadUrl = new URL(IMAGE_PREFIX + link + IMAGE_SUFFIX);
             try (ReadableByteChannel readableByteChannel = Channels.newChannel(downloadUrl.openStream());
-                 FileOutputStream fileOutputStream = new FileOutputStream(DOWNLOAD_DESTINATION + link + DOWNLOAD_IMAGE_FILETYPE)) {
+                FileOutputStream fileOutputStream = new FileOutputStream(DOWNLOAD_DESTINATION + link + DOWNLOAD_IMAGE_FILETYPE)) {
                 fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
             }
         } catch (IOException ex) {
