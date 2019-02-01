@@ -63,7 +63,7 @@ public class Prediction {
     private static final String PROJECT_ID = "sort-pics";
     private static final String COMPUTE_REGION = "us-central1";
     private static final String MODEL_ID = "ICN4029841784534137370";
-    private static final String SCORE_THRESHOLD = null; // e.g. 0.8
+    private static final String SCORE_THRESHOLD = null; // e.g. "0.8" or null (null: do not use param)
     private static final String BASE_PATH = "_unrated";
     private static final String FILE_TYPES_TO_RATE = "image/jpeg";
     private static final Storage STORAGE = StorageOptions.newBuilder().build().getService();
@@ -149,7 +149,7 @@ public class Prediction {
 
     private static ByteString getFileFromBucket(String filePath) {
         try (ReadChannel reader = STORAGE.reader(BUCKET_NAME, filePath);
-            InputStream inputStream = Channels.newInputStream(reader);) {
+            InputStream inputStream = Channels.newInputStream(reader)) {
             return ByteString.copyFrom(IOUtils.toByteArray(inputStream));
         } catch (IOException ex) {
             ex.printStackTrace();
