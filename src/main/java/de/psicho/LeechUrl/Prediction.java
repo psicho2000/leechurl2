@@ -29,6 +29,9 @@ import java.io.InputStream;
 import java.nio.channels.Channels;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.stream.StreamSupport;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -43,6 +46,7 @@ import com.google.cloud.automl.v1beta1.PredictResponse;
 import com.google.cloud.automl.v1beta1.PredictionServiceClient;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.cloud.storage.StorageOptions;
 import com.google.protobuf.ByteString;
 
@@ -61,7 +65,11 @@ public class Prediction {
     private static final String MODEL_ID = "ICN4029841784534137370";
     private static final String SCORE_THRESHOLD = null; // e.g. 0.8
     private static final String BASE_PATH = "_unrated";
+    private static final String FILE_TYPES_TO_RATE = "image/jpeg";
     private static final Storage STORAGE = StorageOptions.newBuilder().build().getService();
+    private static final int FROM = 0;
+    private static final int TO = 100;
+    private static final int BATCH_INCREMENT = 20;
 
     /**
      * Demonstrates using the AutoML client to predict an image.
@@ -87,42 +95,52 @@ public class Prediction {
             params.put("score_threshold", SCORE_THRESHOLD);
         }
 
-        // Optional: may use batch mode
-        // * https://cloud.google.com/ml-engine/docs/tensorflow/batch-predict
-        // * https://cloud.google.com/ml-engine/reference/rest/v1/projects.jobs#PredictionInput
-        // FIXME: Implement logging and from/to mechanism
-        Page<Blob> fileList = STORAGE.list(BUCKET_NAME, Storage.BlobListOption.prefix(BASE_PATH));
-        int i = 0;
-        for (Blob blob : fileList.iterateAll()) {
-            if (blob.getContentType().equals("image/jpeg")) {
-                // Alternative: ByteString content = getFileFromBucket(filePath);
-                ByteString content = ByteString.copyFrom(blob.getContent());
-                predict(predictionClient, modelName, params, content, blob.getName());
-            }
-            if (i % 3 == 0) {
-                log.info("{}: {}", i, shortName(blob.getName()));
-            }
-            if (i++ == 10)
-                return;
-        }
+        AtomicInteger counter = new AtomicInteger(0);
+        Page<Blob> fileList = STORAGE.list(BUCKET_NAME, BlobListOption.prefix(BASE_PATH));
+        // @formatter:off
+        StreamSupport.stream(fileList.iterateAll().spliterator(), false)
+                     .skip(FROM)
+                     .limit(TO)
+                     .forEach(predict(predictionClient, modelName, params, counter));
+        // @formatter:on
     }
 
-    private static void predict(PredictionServiceClient predictionClient, ModelName modelName, Map<String, String> params,
-        ByteString content, String filePath) {
+    private static Consumer<Blob> predict(PredictionServiceClient predictionClient, ModelName modelName,
+        Map<String, String> params, AtomicInteger counter) {
+        return blob -> {
+            if (blob.getContentType().equals(FILE_TYPES_TO_RATE)) {
+                int count = counter.incrementAndGet();
+                // Alternative: ByteString content = getFileFromBucket(filePath);
+                ByteString content = ByteString.copyFrom(blob.getContent());
+                PredictResponse response = predict(predictionClient, modelName, params, content);
+
+                // Process the result
+                // FIXME output data as csv, write file each BATCH_INCREMENT
+                System.out.println(format("Prediction results for %s:", shortName(blob.getName())));
+                for (AnnotationPayload annotationPayload : response.getPayloadList()) {
+                    System.out.println("Predicted class name  :" + annotationPayload.getDisplayName());
+                    System.out.println("Predicted class score :" + annotationPayload.getClassification().getScore());
+                }
+                if (count % BATCH_INCREMENT == 0) {
+                    log.info("{}: {}", count, shortName(blob.getName()));
+                    // TODO flush file
+                }
+            }
+        };
+    }
+
+    // Optional: might use batch mode
+    // * https://cloud.google.com/ml-engine/docs/tensorflow/batch-predict
+    // * https://cloud.google.com/ml-engine/reference/rest/v1/projects.jobs#PredictionInput
+    private static PredictResponse predict(PredictionServiceClient predictionClient, ModelName modelName,
+        Map<String, String> params, ByteString content) {
 
         // Assign the image to payload
         Image image = Image.newBuilder().setImageBytes(content).build();
         ExamplePayload examplePayload = ExamplePayload.newBuilder().setImage(image).build();
 
         // Perform the AutoML Prediction request
-        PredictResponse response = predictionClient.predict(modelName, examplePayload, params);
-
-        // Process the result
-        System.out.println(format("Prediction results for %s:", shortName(filePath)));
-        for (AnnotationPayload annotationPayload : response.getPayloadList()) {
-            System.out.println("Predicted class name  :" + annotationPayload.getDisplayName());
-            System.out.println("Predicted class score :" + annotationPayload.getClassification().getScore());
-        }
+        return predictionClient.predict(modelName, examplePayload, params);
     }
 
     private static String shortName(String filePath) {
