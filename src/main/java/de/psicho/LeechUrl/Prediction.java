@@ -22,12 +22,14 @@ package de.psicho.LeechUrl;
 
 // Imports the Google Cloud client library
 
-import static java.lang.String.format;
+import static com.google.common.collect.Lists.newArrayList;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -49,6 +51,7 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.cloud.storage.StorageOptions;
 import com.google.protobuf.ByteString;
+import com.opencsv.CSVWriter;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -96,18 +99,22 @@ public class Prediction {
             params.put("score_threshold", SCORE_THRESHOLD);
         }
 
-        AtomicInteger counter = new AtomicInteger(0);
-        Page<Blob> fileList = STORAGE.list(BUCKET_NAME, BlobListOption.prefix(BASE_PATH));
-        // @formatter:off
-        StreamSupport.stream(fileList.iterateAll().spliterator(), false)
-                     .skip(slice.from)
-                     .limit(slice.to)
-                     .forEach(predict(predictionClient, modelName, params, counter));
-        // @formatter:on
+        try (CSVWriter writer = new CSVWriter(new FileWriter("LeechUrl2.prediction.csv"), ',')) {
+            AtomicInteger counter = new AtomicInteger(0);
+            Page<Blob> fileList = STORAGE.list(BUCKET_NAME, BlobListOption.prefix(BASE_PATH));
+            // @formatter:off
+            StreamSupport.stream(fileList.iterateAll().spliterator(), false)
+                         .skip(slice.from)
+                         .limit(slice.to)
+                         .forEach(predict(predictionClient, modelName, params, counter, writer));
+            // @formatter:on
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 
     private static Consumer<Blob> predict(PredictionServiceClient predictionClient, ModelName modelName,
-        Map<String, String> params, AtomicInteger counter) {
+        Map<String, String> params, AtomicInteger counter, CSVWriter writer) throws IOException {
         return blob -> {
             if (blob.getContentType().equals(FILE_TYPES_TO_RATE)) {
                 int count = counter.incrementAndGet();
@@ -116,15 +123,19 @@ public class Prediction {
                 PredictResponse response = predict(predictionClient, modelName, params, content);
 
                 // Process the result
-                // FIXME output data as csv, write file each BATCH_INCREMENT
-                System.out.println(format("Prediction results for %s:", shortName(blob.getName())));
+                List<String> predicted = newArrayList(shortName(blob.getName()));
                 for (AnnotationPayload annotationPayload : response.getPayloadList()) {
-                    System.out.println("Predicted class name  :" + annotationPayload.getDisplayName());
-                    System.out.println("Predicted class score :" + annotationPayload.getClassification().getScore());
+                    predicted.add(annotationPayload.getDisplayName());
+                    predicted.add(Float.toString(annotationPayload.getClassification().getScore()));
                 }
+                writer.writeNext(predicted.toArray(new String[0]));
                 if (count % BATCH_INCREMENT == 0) {
                     log.info("{}: {}", count, shortName(blob.getName()));
-                    // TODO flush file
+                    try {
+                        writer.flush();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
             }
         };
