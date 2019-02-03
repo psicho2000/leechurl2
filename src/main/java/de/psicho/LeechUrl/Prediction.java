@@ -67,14 +67,15 @@ public class Prediction {
     private static final String BASE_PATH = "_unrated";
     private static final String FILE_TYPES_TO_RATE = "image/jpeg";
     private static final Storage STORAGE = StorageOptions.newBuilder().build().getService();
-    private static final int FROM = 0;
-    private static final int TO = 100;
     private static final int BATCH_INCREMENT = 20;
 
     /**
      * Demonstrates using the AutoML client to predict an image.
+     * 
+     * @param args optional from [0] and to [1]. If not provided, from = 0 and to = Integer.MAX_VALUE.
      */
-    public static void batchPredict() {
+    public static void batchPredict(String[] args) {
+        Slice slice = new Slice(args);
 
         // Instantiate client for prediction service.
         PredictionServiceClient predictionClient;
@@ -99,8 +100,8 @@ public class Prediction {
         Page<Blob> fileList = STORAGE.list(BUCKET_NAME, BlobListOption.prefix(BASE_PATH));
         // @formatter:off
         StreamSupport.stream(fileList.iterateAll().spliterator(), false)
-                     .skip(FROM)
-                     .limit(TO)
+                     .skip(slice.from)
+                     .limit(slice.to)
                      .forEach(predict(predictionClient, modelName, params, counter));
         // @formatter:on
     }
@@ -155,5 +156,28 @@ public class Prediction {
             ex.printStackTrace();
         }
         return null;
+    }
+
+    static class Slice {
+
+        Integer from = 0;
+        Integer to = Integer.MAX_VALUE;
+
+        Slice(String[] args) {
+            if (args.length > 0) {
+                try {
+                    from = Integer.parseInt(args[0]);
+                } catch (NumberFormatException ignored) {
+                    // totally ok, use default value
+                }
+            }
+            if (args.length > 1) {
+                try {
+                    to = Integer.parseInt(args[1]);
+                } catch (NumberFormatException ignored) {
+                    // totally ok, use default value
+                }
+            }
+        }
     }
 }
