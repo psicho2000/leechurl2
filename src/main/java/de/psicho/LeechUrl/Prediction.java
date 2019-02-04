@@ -116,7 +116,7 @@ public class Prediction {
     }
 
     private static Consumer<Blob> predict(PredictionServiceClient predictionClient, ModelName modelName,
-        Map<String, String> params, AtomicInteger counter, CSVWriter writer) throws IOException {
+        Map<String, String> params, AtomicInteger counter, CSVWriter writer) {
         return blob -> {
             if (blob.getContentType().equals(FILE_TYPES_TO_RATE)) {
                 int count = counter.incrementAndGet();
