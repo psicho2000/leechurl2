@@ -1,6 +1,7 @@
 # Prediction
 1) Rename csv (`mv LeechUrl2.prediction.csv LeechUrl2.prediction.X.csv`, where X = n+1)
 1) If necessary: stop job (find using `ps aux|grep Leech`)
+1) `export GOOGLE_APPLICATION_CREDENTIALS=/home/markus_d_meier/sort-pics-9f5bbbe58175.json`
 1) Restart job with param `cat LeechUrl2.prediction.*|wc -l`
 
 #  Categorization
