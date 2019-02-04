@@ -37,8 +37,10 @@ import java.util.stream.StreamSupport;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import com.google.api.gax.paging.Page;
+import com.google.api.gax.rpc.ApiException;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.automl.v1beta1.AnnotationPayload;
 import com.google.cloud.automl.v1beta1.ExamplePayload;
@@ -85,7 +87,7 @@ public class Prediction {
         try {
             predictionClient = PredictionServiceClient.create();
         } catch (IOException ex) {
-            ex.printStackTrace();
+            log.error(ExceptionUtils.getStackTrace(ex));
             return;
         }
 
@@ -109,7 +111,7 @@ public class Prediction {
                          .forEach(predict(predictionClient, modelName, params, counter, writer));
             // @formatter:on
         } catch (IOException ex) {
-            ex.printStackTrace();
+            log.error(ExceptionUtils.getStackTrace(ex));
         }
     }
 
@@ -120,21 +122,28 @@ public class Prediction {
                 int count = counter.incrementAndGet();
                 // Alternative: ByteString content = getFileFromBucket(filePath);
                 ByteString content = ByteString.copyFrom(blob.getContent());
-                PredictResponse response = predict(predictionClient, modelName, params, content);
-
-                // Process the result
+                PredictResponse response;
                 List<String> predicted = newArrayList(shortName(blob.getName()));
-                for (AnnotationPayload annotationPayload : response.getPayloadList()) {
-                    predicted.add(annotationPayload.getDisplayName());
-                    predicted.add(Float.toString(annotationPayload.getClassification().getScore()));
+                try {
+                    response = predict(predictionClient, modelName, params, content);
+                    // Process the result
+                    for (AnnotationPayload annotationPayload : response.getPayloadList()) {
+                        predicted.add(annotationPayload.getDisplayName());
+                        predicted.add(Float.toString(annotationPayload.getClassification().getScore()));
+                    }
+                } catch (ApiException ex) {
+                    log.error(ExceptionUtils.getStackTrace(ex));
+                    predicted.add("error");
+                    predicted.add("1");
                 }
+
                 writer.writeNext(predicted.toArray(new String[0]));
                 if (count % BATCH_INCREMENT == 0) {
                     log.info("{}: {}", count, shortName(blob.getName()));
                     try {
                         writer.flush();
                     } catch (IOException ex) {
-                        ex.printStackTrace();
+                        log.error(ExceptionUtils.getStackTrace(ex));
                     }
                 }
             }
@@ -164,7 +173,7 @@ public class Prediction {
             InputStream inputStream = Channels.newInputStream(reader)) {
             return ByteString.copyFrom(IOUtils.toByteArray(inputStream));
         } catch (IOException ex) {
-            ex.printStackTrace();
+            log.error(ExceptionUtils.getStackTrace(ex));
         }
         return null;
     }
