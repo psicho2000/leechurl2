@@ -2,7 +2,6 @@ package de.psicho.LeechUrl;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -35,7 +34,7 @@ public class Sampler {
             int prevLineNumber = 0;
             List<Integer> randoms = randomize();
             for (Integer lineNumber : randoms) {
-                csvReader.skip(lineNumber - prevLineNumber);
+                csvReader.skip(lineNumber - prevLineNumber - 1);
                 String[] nextRecord = csvReader.readNext();
                 if (nextRecord.length == 3) {
                     File srcFile = new File(PIC_SOURCE_PATH + nextRecord[0]);
@@ -47,7 +46,7 @@ public class Sampler {
                 }
                 prevLineNumber = lineNumber;
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             log.info(ExceptionUtils.getStackTrace(ex));
         }
     }
