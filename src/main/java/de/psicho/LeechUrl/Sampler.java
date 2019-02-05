@@ -32,10 +32,10 @@ public class Sampler {
     public static void sample() {
         try (Reader reader = Files.newBufferedReader(Paths.get(REFERENCE_FILE)); CSVReader csvReader = new CSVReader(reader);
             CSVWriter writer = new CSVWriter(new FileWriter(SAMPLE_FILE), ',');) {
-            int lastLineNumber = 0;
+            int prevLineNumber = 0;
             List<Integer> randoms = randomize();
             for (Integer lineNumber : randoms) {
-                csvReader.skip(lineNumber - lastLineNumber);
+                csvReader.skip(lineNumber - prevLineNumber);
                 String[] nextRecord = csvReader.readNext();
                 if (nextRecord.length == 3) {
                     File srcFile = new File(PIC_SOURCE_PATH + nextRecord[0]);
@@ -45,7 +45,7 @@ public class Sampler {
                 } else {
                     log.info("Line {} with pic {} has {} values.", lineNumber, nextRecord[0], nextRecord.length);
                 }
-                lastLineNumber = lineNumber;
+                prevLineNumber = lineNumber;
             }
         } catch (IOException ex) {
             log.info(ExceptionUtils.getStackTrace(ex));
