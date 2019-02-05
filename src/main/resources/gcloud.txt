@@ -1,0 +1,18 @@
+Config
+    Location:           C:\Users\Markus\.boto
+    Help:               gcloud help config
+    Change zone:        gcloud config set compute/zone NAME
+    Docs:               https://cloud.google.com/storage/docs/gsutil/commands/config]
+
+Help
+    General:            gcloud --help
+    Advanced features:  gcloud topic --help
+
+Login
+    Login:              gcloud alpha cloud-shell ssh
+    Help:               https://cloud.google.com/sdk/gcloud/reference/alpha/cloud-shell/ssh
+
+Auth
+    Erstellen:          gcloud auth application-default login
+    Abgelegt unter:     C:\Users\Markus\AppData\Roaming\gcloud\application_default_credentials.json
+    Create access token: gcloud auth application-default print-access-token
